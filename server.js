@@ -57,7 +57,7 @@ router.post('/signin', async (req, res) => { // Use async/await
     if (isMatch) {
       const userToken = { id: user._id, username: user.username }; // Use user._id (standard Mongoose)
       const token = jwt.sign(userToken, process.env.SECRET_KEY, { expiresIn: '1h' }); // Add expiry to the token (e.g., 1 hour)
-      res.json({ success: true, token: 'JWT ' + token });
+      res.json({ success: true, token: 'jwt ' + token });
     } else {
       res.status(401).json({ success: false, msg: 'Authentication failed. Incorrect password.' }); // 401 Unauthorized
     }
@@ -68,12 +68,68 @@ router.post('/signin', async (req, res) => { // Use async/await
 });
 
 router.route('/movies')
-    .get(authJwtController.isAuthenticated, async (req, res) => {
-        return res.status(500).json({ success: false, message: 'GET request not supported' });
+    // GET all movies
+    .get('/movies', authJwtController.isAuthenticated, async (req, res) => {
+      try {
+        const movies = await Movie.find();
+        res.json(movies);
+      } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+      }
     })
-    .post(authJwtController.isAuthenticated, async (req, res) => {
-        return res.status(500).json({ success: false, message: 'POST request not supported' });
+
+    // POST a new movie
+    .post('/movies', authJwtController.isAuthenticated, async (req, res) => {
+      try {
+        // Validate required fields (you can also rely on Mongoose validation)
+        if (!req.body.title || !req.body.releaseDate || !req.body.genre || !req.body.actors) {
+          return res.status(400).json({ success: false, message: 'Missing required movie information.' });
+        }
+        const newMovie = new Movie(req.body);
+        const savedMovie = await newMovie.save();
+        res.status(201).json(savedMovie);
+      } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+      }
+    })
+
+    // GET a movie by title
+    .get('/movies/:title', authJwtController.isAuthenticated, async (req, res) => {
+      try {
+        const movie = await Movie.findOne({ title: req.params.title });
+        if (!movie) return res.status(404).json({ success: false, message: 'Movie not found.' });
+        res.json(movie);
+      } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+      }
+    })
+
+    // PUT update a movie by title
+    .put('/movies/:title', authJwtController.isAuthenticated, async (req, res) => {
+      try {
+        const updatedMovie = await Movie.findOneAndUpdate(
+          { title: req.params.title },
+          req.body,
+          { new: true, runValidators: true }
+        );
+        if (!updatedMovie) return res.status(404).json({ success: false, message: 'Movie not found.' });
+        res.json(updatedMovie);
+      } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+      }
+    })
+
+    // DELETE a movie by title
+    .delete('/movies/:title', authJwtController.isAuthenticated, async (req, res) => {
+      try {
+        const deletedMovie = await Movie.findOneAndDelete({ title: req.params.title });
+        if (!deletedMovie) return res.status(404).json({ success: false, message: 'Movie not found.' });
+        res.json({ success: true, message: 'Movie deleted successfully.' });
+      } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+      }
     });
+
 
 app.use('/', router);
 
