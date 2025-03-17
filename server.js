@@ -68,7 +68,7 @@ router.post('/signin', async (req, res) => { // Use async/await
 });
 
 // Define endpoints for '/movies'
-router.route('/movies')
+router.route('/movie')
   // GET all movies
   .get(authJwtController.isAuthenticated, async (req, res) => {
     try {
@@ -92,8 +92,8 @@ router.route('/movies')
     }
   });
 
-// Define endpoints for '/movies/:title'
-router.route('/movies/:title')
+// Define endpoints for '/movie/:title'
+router.route('/movie/:title')
   // GET a movie by title
   .get(authJwtController.isAuthenticated, async (req, res) => {
     try {
